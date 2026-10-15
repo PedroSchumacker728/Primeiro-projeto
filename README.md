@@ -1,5 +1,9 @@
 # GESTO — Planejamento da migração para Next.js e implementação de API com JSON estático
 
+Nome e RA dos integrantes:
+
+Pedro Schumacker, RA-10771366 Rafael Jardim, RA:10771392 Gabriel Jardim, RA:10771388 Guilherme Tavora, RA:10771396
+
 ## 1. Objetivo da mudança
 
 O projeto GESTO foi desenvolvido utilizando HTML, CSS e JavaScript. Nossa proposta é migrá-lo para Next.js com React, mantendo o funcionamento do jogo e do tutorial, mas melhorando a organização, a reutilização dos componentes e a forma de acessar os dados.
