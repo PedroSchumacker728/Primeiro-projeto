@@ -5,7 +5,7 @@ Nome e RA dos integrantes:
 Pedro Schumacker, RA-10771366/
 Rafael Jardim, RA:10771392/
 Gabriel Jardim, RA:10771388/
-Guilherme Tavora, RA:10771396/
+Guilherme Tavora, RA:10771396
 
 ## 1. Objetivo da mudança
 
