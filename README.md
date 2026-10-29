@@ -1,172 +1,153 @@
-# GESTO — Planejamento da migração para Next.js e implementação de API com JSON estático
+# GESTO — Next.js com interface e lógica JavaScript componentizadas
+
+## O que foi feito
+
+Projeto baseado no ZIP **GESTO_NEXTJS_HTML_CSS_COMPONENTES_FLUXO(3).zip**, com **Menu, Jogar e Tutorial**. Além dos componentes visuais JSX já existentes, o código JavaScript foi migrado para componentes React, hooks e funções de regras de negócio.
+
+- **HTML/JSX:** mantidas as três páginas, as classes CSS e os IDs úteis para a aparência; componentes visuais estão em `src/components/`.
+- **CSS:** `Menu.css`, `Jogar.css`, `Tutor.css` e `globals.css` foram preservados sem alterações.
+- **JavaScript:** os antigos scripts que inseriam HTML e escutavam eventos manualmente agora são representados por componentes React + `useGame` / `useTutorial` + reducers e bibliotecas.
+- **Antigos scripts:** cópias em `legacy/Menu.js`, `legacy/Jogar.js` e `legacy/Tutor.js`, **não executadas**. Os arquivos foram retirados de `public/scripts/` para prevenir execução duplicada e conflitos de variáveis globais.
+- **Imagens:** as 26 imagens em `public/sinais/` foram mantidas.
+- **API JSON:** ainda **não foi implementada**. Os diagramas rotulam essa camada como futura/proposta.
+
+## Como executar
+
+1. Instale o Node.js.
+2. No terminal, abra a pasta `gesto-nextjs` (a que contém `package.json`).
+3. Execute `npm install`.
+4. Execute `npm run dev`.
+5. Abra `http://localhost:3000`.
+6. Confira as rotas `/`, `/jogar` e `/tutor`.
+7. Opcional: execute `npm test` para testes das regras e `npm run build` para testar a compilação do Next.js.
+
+> Importante: as regras foram testadas com `npm test`. A compilação Next.js precisa ser verificada após a instalação das dependências, caso seu ambiente ainda não tenha os pacotes.
+
+## Organização dos arquivos
+
+```text
+gesto-nextjs/
+├── src/
+│   ├── app/
+│   │   ├── layout.jsx             Layout comum
+│   │   ├── page.jsx               Rota /  (Menu)
+│   │   ├── Menu.css
+│   │   ├── globals.css
+│   │   ├── jogar/
+│   │   │   ├── page.jsx           Rota /jogar
+│   │   │   └── Jogar.css
+│   │   └── tutor/
+│   │       ├── page.jsx           Rota /tutor
+│   │       └── Tutor.css
+│   ├── components/                Componentes visuais (JSX)
+│   ├── hooks/
+│   │   ├── useGame.js             Controla ações, temporizadores e teclado do jogo
+│   │   └── useTutorial.js         Controla ações, progresso e teclado do tutorial
+│   ├── lib/
+│   │   ├── game.mjs               Regras puras: palavras, avaliação, dicas, teclas
+│   │   ├── gameState.mjs          Reducer e estado do jogo
+│   │   ├── tutorialState.mjs      Reducer e estado do tutorial
+│   │   └── libras.mjs             Alfabeto, embaralhamento, caminho das imagens
+│   └── data/
+│       └── menu.mjs               Links e integrantes
+├── public/sinais/                26 imagens
+├── legacy/                       Scripts JS originais (somente referência)
+├── tests/                        Testes automatizados das regras
+└── diagramas/                    XMLs editáveis no Draw.io
+```
+
+## Árvore dos componentes (composição real)
+
+```text
+RootLayout
+├── Menu  (src/app/page.jsx)
+│   ├── MenuHeader
+│   └── MenuContent
+│       ├── MenuLinks             ← menu.mjs
+│       └── TeamTable             ← menu.mjs
+├── Jogar  (src/app/jogar/page.jsx) ← useGame()
+│   ├── GameHeader
+│   └── GameContent               ← game.state, add, erase, send, hint, toggle
+│       ├── GameModeSelector
+│       ├── GameTitle
+│       ├── GameMainArea
+│       │   └── GameAttemptRow (6 linhas)
+│       │       └── GameLetterCell (5 por linha)
+│       ├── GameKeyboard
+│       │   └── GameKeyboardKey (26 teclas)
+│       └── GameStatus
+└── Tutorial  (src/app/tutor/page.jsx) ← useTutorial()
+    ├── TutorialHeader
+    ├── TutorialProgress
+    ├── TutorialContent
+    │   ├── TutorialSign
+    │   ├── TutorialAnswer
+    │   ├── TutorialKeyboard
+    │   └── TutorialActions
+    └── TutorialFooter
+```
+
+**Atenção:** as setas `←` acima significam que a página chama o hook e repassa seus dados e callbacks aos componentes via propriedades (*props*). O hook não é um componente visual.
+
+## Papel dos módulos JavaScript
+
+| Arquivo | Executa onde | Responsabilidade |
+|---|---|---|
+| `src/data/menu.mjs` | Importado pela renderização das páginas | Dados dos links e integrantes, sem manipulação do DOM |
+| `src/hooks/useGame.js` | Navegador, dentro da página Client Component `/jogar` | Iniciar rodadas, gerenciar ações, temporizadores e bloquear teclado físico durante o jogo |
+| `src/lib/gameState.mjs` | Navegador, chamado pelo hook | Estado e transições `NEW_ROUND`, `ADD`, `ERASE`, `SEND`, `HINT`, `TOGGLE` |
+| `src/lib/game.mjs` | Navegador, chamado pelo hook/reducer | Sorteio, comparação de 5 letras, cores, dicas, tabuleiro 6×5 |
+| `src/hooks/useTutorial.js` | Navegador, dentro da página Client Component `/tutor` | Inicializar ordem aleatória, eventos, temporizadores e avanço |
+| `src/lib/tutorialState.mjs` | Navegador, chamado pelo hook | `INIT`, `FILL`, `ERASE`, `SHIFT`, `HINT`, `VERIFY`, `ADVANCE`, `FINISH` |
+| `src/lib/libras.mjs` | Módulo compartilhado (usado na interface e regras) | Alfabeto, embaralhamento e mapeamento letra → imagem |
 
-Nome e RA dos integrantes:
+A renderização inicial do Next.js pode gerar HTML no servidor, inclusive para páginas com `"use client"`. A execução de **eventos, estados do jogo, sorteio, verificação e pontuação acontece no cliente** após a hidratação. Não há lógica de pontuação implementada em API do servidor.
 
-Pedro Schumacker, RA-10771366/
-Rafael Jardim, RA:10771392/
-Gabriel Jardim, RA:10771388/
-Guilherme Tavora, RA:10771396
+## Fluxos do jogo e do tutorial
 
-## 1. Objetivo da mudança
+### Jogar
 
-O projeto GESTO foi desenvolvido utilizando HTML, CSS e JavaScript. Nossa proposta é migrá-lo para Next.js com React, mantendo o funcionamento do jogo e do tutorial, mas melhorando a organização, a reutilização dos componentes e a forma de acessar os dados.
+1. `useGame()` inicializa a rodada com `sortearPalavra()` e `novoTeclado()`.
+2. `GameKeyboardKey` chama `add(letra)` e o reducer preenche `state.typed`.
+3. `GameAttemptRow` / `GameLetterCell` exibem as letras em sinais ou caracteres conforme `letters`.
+4. `Apagar` chama `erase()`; `Enviar` chama `send()` → `avaliarTentativa()`.
+5. O reducer compara as letras, atualiza o tabuleiro, as cores, a pontuação e a mensagem.
+6. Acerto soma 100 pontos; a rodada termina após acertar ou gastar 6 tentativas.
+7. Após cerca de 1,35 segundo, o hook inicia outra rodada preservando os pontos.
+8. O botão Dica mostra até três posições distintas por rodada, destacando a tecla correspondente.
 
-Vamos dividir o projeto em três partes principais:
+### Tutorial
 
-* Frontend: responsável pelas telas e interações do usuário.
+1. `useTutorial()` embaralha as 26 letras e exibe a imagem em `TutorialSign`.
+2. `TutorialKeyboard` seleciona a letra (`FILL`), apaga (`ERASE`) ou altera maiúscula/minúscula (`SHIFT`).
+3. `TutorialActions` usa `HINT` para mostrar a letra correta ou `VERIFY` para conferir.
+4. Resposta incorreta mantém a etapa e mostra erro; resposta correta prepara o avanço.
+5. `TutorialProgress` atualiza a barra e o contador, até terminar 26/26.
+6. Ao concluir, o teclado e as ações de resposta são bloqueados.
 
-* API: responsável por fornecer as informações solicitadas pelas páginas.
+## Rotas existentes
 
-* JSON estático: responsável por armazenar palavras, dicas e informações dos sinais de Libras.
+| Tipo | Caminho | Onde está |
+|---|---|---|
+| Página | `/` | `src/app/page.jsx` |
+| Página | `/jogar` | `src/app/jogar/page.jsx` |
+| Página | `/tutor` | `src/app/tutor/page.jsx` |
+| Recurso estático | `/sinais/sinal_01.png` até `/sinais/sinal_26.png` | `public/sinais/` |
 
-## 2. Componentes que vamos criar no Next.js
+**Não existem** endpoints `/api/*` nesta versão. A página 4 do diagrama é apenas uma proposta de API JSON (palavras, iniciar rodada, verificar tentativa, dica, tutorial e resultados). Não descreva essas rotas como implementadas na apresentação.
 
-Em vez de manter todo o conteúdo dentro de páginas HTML, vamos separar a interface em componentes React, cada um com uma responsabilidade.
+## Diagramas XML
 
-### Componentes da interface
+- `diagramas/GESTO_Arquitetura_JS_Atualizada_CORRIGIDA.xml` — quatro páginas: arquitetura real, componentes, fluxos JS e API futura.
+- `diagramas/GESTO_Componentes_JavaScript_Fluxos_CORRIGIDOS.xml` — duas páginas: componentes e processamento do JS.
 
-| Componente      | Responsabilidade                                                   |
-| --------------- | ------------------------------------------------------------------ |
-| Header          | Exibir o nome e a identidade visual do GESTO.                      |
-| MenuPrincipal   | Apresentar as opções Jogar e Tutorial.                             |
-| BotaoNavegacao  | Padronizar os botões usados para navegar entre as telas.           |
-| LayoutPrincipal | Manter o padrão visual, os espaçamentos e a estrutura das páginas. |
+Para abrir: entre em https://app.diagrams.net → **Arquivo → Abrir de → Dispositivo** → escolha o `.xml`. Os blocos e conectores são editáveis.
 
-Esses componentes serão reutilizados para evitar repetição de código.
+## Testes
 
-### Componentes do jogo
+```bash
+npm test
+npm run build
+```
 
-| Componente         | Responsabilidade                                                 |
-| ------------------ | ---------------------------------------------------------------- |
-| Jogo               | Coordenar o funcionamento da partida e seus componentes.         |
-| PalavraSecreta     | Exibir os espaços correspondentes às letras da palavra sorteada. |
-| TecladoLibras      | Mostrar os sinais das letras para o jogador selecionar.          |
-| BotaoSinal         | Representar individualmente cada letra e seu sinal.              |
-| ContadorTentativas | Mostrar quantas tentativas ainda restam, com limite de seis.     |
-| SistemaDicas       | Apresentar a dica correspondente à palavra atual.                |
-| Pontuacao          | Exibir a pontuação obtida durante a partida.                     |
-| ResultadoPartida   | Informar vitória ou derrota e permitir iniciar outra partida.    |
-
-O componente Jogo será o principal responsável pela lógica. Ele controlará a palavra selecionada, as letras escolhidas, os acertos, os erros e a pontuação.
-
-Os demais componentes receberão as informações necessárias e atualizarão sua apresentação conforme o andamento da partida.
-
-### Componentes do tutorial
-
-| Componente        | Responsabilidade                                                 |
-| ----------------- | ---------------------------------------------------------------- |
-| TutorialLibras    | Organizar a apresentação do alfabeto em Libras.                  |
-| GradeSinais       | Distribuir visualmente os 26 sinais.                             |
-| CardSinal         | Exibir uma letra e a imagem correspondente.                      |
-| VisualizadorSinal | Permitir visualizar um sinal individualmente com maior destaque. |
-
-O tutorial buscará as informações dos sinais pela API, em vez de manter a lista diretamente na página.
-
-Isso permitirá que os mesmos dados sejam utilizados tanto pelo tutorial quanto pelo teclado do jogo.
-
-## 3. Como os componentes vão se comunicar
-
-Página Jogar
-
-Organiza a tela e carrega o componente Jogo
-
-Componente Jogo
-
-Controla os estados, regras e eventos da partida
-
-PalavraSecreta
-
-TecladoLibras
-
-ContadorTentativas
-
-SistemaDicas
-
-Pontuacao
-
-ResultadoPartida
-
-Por exemplo, quando o usuário selecionar uma letra no TecladoLibras, o componente Jogo receberá essa escolha e verificará se a letra pertence à palavra.
-
-Depois disso, atualizará os componentes PalavraSecreta, ContadorTentativas e Pontuacao, conforme o resultado.
-
-Dessa forma, cada componente terá uma função específica, mas todos trabalharão em conjunto.
-
-## 4. Organização dos dados em JSON estático
-
-Vamos criar dois conjuntos principais de dados.
-
-| Arquivo       | Informações armazenadas                                              | Utilização                                  |
-| ------------- | -------------------------------------------------------------------- | ------------------------------------------- |
-| sinais.json   | Identificador, letra e caminho da imagem do sinal                    | Tutorial e teclado do jogo                  |
-| palavras.json | Identificador, palavra, dica e nível de dificuldade, se implementado | Sorteio de palavras e funcionamento do jogo |
-
-As imagens continuarão armazenadas na pasta pública do projeto. O JSON guardará apenas os caminhos dessas imagens.
-
-Isso facilitará a manutenção: para acrescentar uma palavra, por exemplo, bastará atualizar o arquivo de dados, sem modificar os componentes do jogo.
-
-## 5. Criação da API no Next.js
-
-A API será criada utilizando as Route Handlers do Next.js.
-
-| Endpoint               | Responsabilidade                                |
-| ---------------------- | ----------------------------------------------- |
-| `GET /api/sinais`      | Retornar todos os sinais cadastrados.           |
-| `GET /api/sinais/[id]` | Retornar as informações de um sinal específico. |
-| `GET /api/palavras`    | Retornar a lista de palavras disponíveis.       |
-
-Também vamos separar a lógica de comunicação com a API em uma camada de serviços.
-
-Teremos, por exemplo, um serviço de sinais, responsável por solicitar os dados utilizados pelo tutorial e teclado, e um serviço de palavras, responsável por buscar as palavras utilizadas no jogo.
-
-Esses serviços centralizarão as requisições, o tratamento de erros e a interpretação das respostas.
-
-## 6. Como será o consumo da API
-
-O consumo acontecerá quando os componentes precisarem carregar informações.
-
-No tutorial: ao abrir a página, a aplicação fará uma requisição para `/api/sinais`. A API lerá o JSON, retornará a lista de sinais e o componente GradeSinais utilizará esses dados para montar os cartões.
-
-No jogo: ao iniciar a partida, a aplicação buscará as palavras em `/api/palavras` e os sinais em `/api/sinais`. Depois de receber os dados, escolherá uma palavra e apresentará o teclado visual.
-
-Vamos prever três situações importantes para cada carregamento: enquanto os dados estão sendo buscados, quando chegam corretamente e quando ocorre algum erro.
-
-## 7. Etapas práticas do desenvolvimento
-
-1. Preparação do Next.js
-
-   Criar o ambiente no GitHub Codespaces e configurar o projeto com App Router.
-
-2. Migração das páginas
-
-   Transformar Menu, Jogar e Tutorial em páginas Next.js, mantendo o design original.
-
-3. Componentização
-
-   Separar a interface nos componentes descritos e adaptar a lógica JavaScript para os estados e eventos do React.
-
-4. Separação dos dados
-
-   Criar os arquivos JSON e organizar as imagens dos sinais na pasta pública.
-
-5. Implementação da API
-
-   Criar os endpoints que consultarão os arquivos JSON e retornarão as informações.
-
-6. Integração e testes
-
-   Implementar o consumo com `fetch()`, verificar a comunicação com a API e testar as funcionalidades do jogo e tutorial.
-
-7. Documentação
-
-   Registrar no README a estrutura, os componentes, os endpoints, o fluxo dos dados e as instruções para executar no Codespaces.
-
-## 8. Resultado esperado
-
-Ao final, teremos o mesmo GESTO, porém com uma arquitetura mais organizada.
-
-As páginas serão construídas com componentes React reutilizáveis, a lógica do jogo ficará separada da apresentação visual e os dados serão obtidos por requisições HTTP à API do Next.js.
-
-A principal mudança será deixar de trabalhar com páginas e dados diretamente ligados ao JavaScript tradicional e passar a utilizar uma estrutura baseada em componentes, serviços, endpoints e arquivos JSON.
-
-Isso demonstrará, de forma prática, a migração de uma aplicação web tradicional para Next.js e a implementação do consumo de uma API REST com dados estáticos, sem necessidade de banco de dados.
+Os testes automatizados validam as regras de palavras, letras repetidas, novas rodadas, 6 tentativas, 3 dicas, pontos, imagens de Libras, resposta incorreta e as 26 etapas do tutorial. A compilação, o visual e os cliques devem ser conferidos no navegador após `npm install`.
